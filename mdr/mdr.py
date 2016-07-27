@@ -27,7 +27,7 @@ class MDR(object):
 
     """Multifactor Dimensionality Reduction (MDR) for feature construction in machine learning"""
 
-    def __init__(self, tie_break = 0, default_label = 0):
+    def __init__(self, tie_break=0, default_label=0):
         """Sets up the MDR algorithm
 
         Parameters
@@ -42,9 +42,14 @@ class MDR(object):
         None
 
         """
+        # Save params to be recalled later by get_params()
+        self.params = locals()  # Must be placed before any local variable definitions
+        self.params.pop('self')
+
         self.tie_break = tie_break
         self.default_label = default_label
-        self.class_fraction = 0. 
+        self.class_fraction = 0.
+        self.feature_map = defaultdict(lambda: self.default_label)
 
     def fit(self, features, classes):
         """Constructs the MDR feature map from the provided training data
@@ -68,7 +73,6 @@ class MDR(object):
         if num_classes != 2:
             raise ValueError('MDR only supports binary classification')
         self.class_count_matrix = defaultdict(lambda: np.zeros((num_classes,), dtype=np.int))
-        self.feature_map = defaultdict(lambda: self.default_label)
 
         for row_i in range(features.shape[0]):
             feature_instance = tuple(features[row_i]) #convert feature vector to tuple 
@@ -125,7 +129,7 @@ class MDR(object):
         self.fit(features, classes)
         return self.transform(features)
 
-    def score(self, features, classes, add_score = None):
+    def score(self, features, classes, scoring_function=None, **scoring_function_kwargs):
         """Estimates the accuracy of the predictions from the constructed feature
         #pass in another param to customize scoring metrics 
         Parameters
@@ -146,12 +150,30 @@ class MDR(object):
 
         new_feature = self.transform(features)
 
-        if add_score == None:
+        if scoring_function == None:
             results = (new_feature == classes)
             score = np.sum(results)
             return float(score)/classes.size 
         else:
-            return add_score(classes, new_feature) #might have to specify additional params, depending on the metrics in use
+            return scoring_function(classes, new_feature, **scoring_function_kwargs)
+            
+    def get_params(self, deep=None):
+        """Get parameters for this estimator
+        
+        This function is necessary for MDR to work as a drop-in estimator in,
+        e.g., sklearn.cross_validation.cross_val_score
+        
+        Parameters
+        ----------
+        deep: unused
+            Only implemented to maintain interface for sklearn
+        Returns
+        -------
+        params : mapping of string to any
+            Parameter names mapped to their values.
+        """
+
+        return self.params
 
 def main():
     """Main function that is called when MDR is run on the command line"""
